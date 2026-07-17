@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>AI Market Intelligence — MVP</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="nav">
+      <div class="brand">
+        <div class="logo">AI•MI</div>
+        <small class="internal-brand">YourCompany (internal)</small>
+      </div>
+      <nav class="nav-links">
+        <a href="#platform">Platform</a>
+        <a href="#products">Products</a>
+        <a href="#resources">Resources</a>
+        <a href="#company">Company</a>
+        <button id="btn-try" class="cta">Try Free</button>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-left">
+          <h1 class="hero-title">Instant market & competitive intelligence — powered by AI</h1>
+          <p class="hero-sub">Enter any company or market to generate analyst-quality insights across global, regional, and local levels.</p>
+
+          <div class="search-box">
+            <input id="search-input" placeholder="Enter any company or market to generate insights" />
+            <div class="search-actions">
+              <button id="btn-search" class="btn-primary">Generate insights</button>
+              <button id="btn-example" class="btn-ghost">See Example Report</button>
+            </div>
+          </div>
+
+          <div class="capabilities">
+            <button id="btn-competitors" class="cap">🎯 Competitor discovery</button>
+            <button id="btn-market" class="cap">📊 Market sizing</button>
+            <button id="btn-monitoring" class="cap">🔔 Monitoring & alerts</button>
+            <button id="btn-ai" class="cap">🤖 AI-powered analysis</button>
+          </div>
+
+          <div class="who-for">
+            <strong>Designed for:</strong>
+            <ul>
+              <li>Strategy teams</li>
+              <li>Product & Marketing</li>
+              <li>Competitive Intelligence units</li>
+              <li>Consultants & CXOs</li>
+            </ul>
+          </div>
+
+          <div class="cta-zone">
+            <button id="btn-build" class="btn-primary">Build your first insight in 30 seconds</button>
+            <button id="btn-demo" class="btn-ghost">Interactive Demo</button>
+          </div>
+        </div>
+
+        <div class="hero-right">
+          <div class="output-card">
+            <h3>Insights</h3>
+            <div id="insight-box" class="insight-box">Enter a company or market and press "Generate insights" to preview the AI output here.</div>
+            <div id="insight-meta" class="insight-meta">Source: <span id="insight-source">mock</span></div>
+          </div>
+
+          <div class="insight-tiles">
+            <div id="tile-competitors" class="insight-tile" style="display:none;">
+              <h4>🎯 COMPETITOR DISCOVERY</h4>
+              <div class="tile-content"></div>
+            </div>
+            <div id="tile-market" class="insight-tile" style="display:none;">
+              <h4>📊 MARKET SIZING</h4>
+              <div class="tile-content"></div>
+            </div>
+            <div id="tile-monitoring" class="insight-tile" style="display:none;">
+              <h4>🔔 MONITORING & ALERTS</h4>
+              <div class="tile-content"></div>
+            </div>
+            <div id="tile-ai" class="insight-tile" style="display:none;">
+              <h4>🤖 AI-POWERED ANALYSIS</h4>
+              <div class="tile-content"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="platform" class="section">
+        <h2>Platform</h2>
+        <p>High-detail product tour: data engine, analyst-AI validation, competitor discovery, market intelligence suite, monitoring, AI workbench, dashboards, integrations, security & compliance.</p>
+      </section>
+
+      <section id="products" class="section">
+        <h2>Intelligence products</h2>
+        <ul>
+          <li>Competitor Battlecards</li>
+          <li>Market Sizing Reports</li>
+          <li>Company XRay Reports</li>
+          <li>Alerts & Signal Feeds</li>
+          <li>Scenario Simulator</li>
+        </ul>
+      </section>
+
+      <section id="resources" class="section">
+        <h2>Resources & Insights</h2>
+        <p>Intelligence Hub, Research Library, Tutorials, Webinars, API docs.</p>
+      </section>
+
+      <section id="company" class="section">
+        <h2>Company & Conversion</h2>
+        <p>About, Why Us, Pricing, Support, Contact.</p>
+      </section>
+
+      <footer class="footer">
+        <div class="logos">Client logos — coming soon</div>
+        <div class="footer-links">© AI MI Platform</div>
+      </footer>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

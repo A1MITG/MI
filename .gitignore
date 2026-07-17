@@ -1,0 +1,21 @@
+# Environment & secrets
+.env
+.env.*
+GrokAPI.txt
+*.key
+*.pem
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# OS / editor
+.DS_Store
+Thumbs.db
