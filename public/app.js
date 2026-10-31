@@ -1,181 +1,162 @@
+const form = document.getElementById('ask');
 const input = document.getElementById('search-input');
 const btn = document.getElementById('btn-search');
-const btnExample = document.getElementById('btn-example');
 const insightBox = document.getElementById('insight-box');
+const insightMeta = document.getElementById('insight-meta');
 const insightSource = document.getElementById('insight-source');
+const reportTitle = document.getElementById('report-title');
+const tilesEl = document.querySelector('.tiles');
+const TILES = ['competitors', 'market', 'monitoring', 'ai'];
 
 // Store the full insights data
 let insightsData = {};
 
+// Day / night: one tap flips what is showing, and the choice is kept for the next visit.
+const dayNight = document.getElementById('dayNight');
+const isDark = () => (document.documentElement.dataset.theme ? document.documentElement.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches);
+const showTheme = () => { const d = isDark(); dayNight.setAttribute('aria-pressed', String(d)); dayNight.setAttribute('aria-label', d ? 'Switch to day mode' : 'Switch to night mode'); };
+dayNight.addEventListener('click', () => {
+  const t = isDark() ? 'light' : 'dark';
+  document.documentElement.dataset.theme = t;
+  try { localStorage.setItem('vp-theme', t); } catch (e) {}
+  showTheme();
+});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', showTheme);
+showTheme();
+
 function extractSections(text) {
-  const sections = {
-    competitors: '',
-    market: '',
-    monitoring: '',
-    ai: ''
-  };
-  
+  const sections = { competitors: '', market: '', monitoring: '', ai: '' };
   // Split by section headers and extract content
-  const parts = text.split(/(?=🎯|📊|🔔|🤖)/);
-  
-  parts.forEach(part => {
-    if (part.includes('🎯 COMPETITOR DISCOVERY')) {
-      sections.competitors = part.replace('🎯 COMPETITOR DISCOVERY', '').trim();
-    } else if (part.includes('📊 MARKET SIZING')) {
-      sections.market = part.replace('📊 MARKET SIZING', '').trim();
-    } else if (part.includes('🔔 MONITORING & ALERTS')) {
-      sections.monitoring = part.replace('🔔 MONITORING & ALERTS', '').trim();
-    } else if (part.includes('🤖 AI-POWERED ANALYSIS')) {
-      sections.ai = part.replace('🤖 AI-POWERED ANALYSIS', '').trim();
-    }
+  text.split(/(?=🎯|📊|🔔|🤖)/).forEach(part => {
+    if (part.includes('🎯 COMPETITOR DISCOVERY')) sections.competitors = part.replace('🎯 COMPETITOR DISCOVERY', '').trim();
+    else if (part.includes('📊 MARKET SIZING')) sections.market = part.replace('📊 MARKET SIZING', '').trim();
+    else if (part.includes('🔔 MONITORING & ALERTS')) sections.monitoring = part.replace('🔔 MONITORING & ALERTS', '').trim();
+    else if (part.includes('🤖 AI-POWERED ANALYSIS')) sections.ai = part.replace('🤖 AI-POWERED ANALYSIS', '').trim();
   });
-  
-  console.log('Extracted sections:', sections); // Debug log
   return sections;
 }
 
-function showTile(tileId, content) {
-  console.log(`Showing tile: ${tileId}, content:`, content); // Debug log
-  const tile = document.getElementById(`tile-${tileId}`);
-  if (tile) {
-    if (content) {
-      tile.style.display = 'block';
-      const contentDiv = tile.querySelector('.tile-content');
-      if (contentDiv) {
-        contentDiv.textContent = content;
-      }
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const inline = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/^#+\s*/, '');
+
+// The model answers in light markdown: bullets (•, -, *), numbered items and **bold**. Turn that into
+// lists and paragraphs; anything else stays as a plain paragraph.
+function toHtml(text) {
+  const out = [];
+  let list = null;
+  const close = () => { if (list) { out.push(`</${list}>`); list = null; } };
+  text.split('\n').map(l => l.trim()).filter(Boolean).forEach(line => {
+    let m;
+    if ((m = line.match(/^(?:[•\-*]|•)\s+(.*)$/))) {
+      if (list !== 'ul') { close(); out.push('<ul>'); list = 'ul'; }
+      out.push(`<li>${inline(m[1])}</li>`);
+    } else if ((m = line.match(/^\d+[.)]\s+(.*)$/))) {
+      if (list !== 'ol') { close(); out.push('<ol>'); list = 'ol'; }
+      out.push(`<li>${inline(m[1])}</li>`);
     } else {
-      console.warn(`No content for tile: ${tileId}`);
+      close();
+      out.push(`<p>${inline(line)}</p>`);
     }
-  } else {
-    console.error(`Tile not found: tile-${tileId}`);
-  }
+  });
+  close();
+  return out.join('');
+}
+
+function showTile(tileId, content) {
+  const tile = document.getElementById(`tile-${tileId}`);
+  if (!tile || !content) return;
+  tile.querySelector('.tile-content').innerHTML = toHtml(content);
+  tile.hidden = false;
 }
 
 function hideAllTiles() {
-  ['competitors', 'market', 'monitoring', 'ai'].forEach(id => {
-    const tile = document.getElementById(`tile-${id}`);
-    if (tile) tile.style.display = 'none';
-  });
+  TILES.forEach(id => { document.getElementById(`tile-${id}`).hidden = true; });
 }
 
-async function fetchInsights(q){
-  insightBox.innerHTML = '<em>Generating insights…</em>';
-  insightSource.textContent = '...';
+function clearActive() {
+  document.querySelectorAll('.cap').forEach(b => b.classList.remove('active'));
+  tilesEl.classList.remove('solo');
+}
+
+function setMessage(text, kind) {
+  insightBox.hidden = false;
+  insightBox.className = 'empty' + (kind ? ' ' + kind : '');
+  insightBox.textContent = text;
+}
+
+async function fetchInsights(q) {
+  input.value = q;
+  insightsData = {};
   hideAllTiles();
-  
-  try{
+  clearActive();
+  reportTitle.textContent = q;
+  insightMeta.hidden = true;
+  setMessage(`Generating insights for ${q}…`, 'loading');
+  btn.disabled = true;
+
+  try {
     const res = await fetch('/api/insights', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: q })
     });
     const data = await res.json();
+    if (!res.ok) throw new Error(data.error || res.statusText);
     const text = data.text || JSON.stringify(data, null, 2);
-    
-    // Store the sections
+
     insightsData = extractSections(text);
-    console.log('Insights data after extraction:', insightsData); // Debug
-    
-    // Format the text with better structure
-    let formatted = text
-      .replace(/🎯 COMPETITOR DISCOVERY/g, '<h4>🎯 COMPETITOR DISCOVERY</h4>')
-      .replace(/📊 MARKET SIZING/g, '<h4>📊 MARKET SIZING</h4>')
-      .replace(/🔔 MONITORING & ALERTS/g, '<h4>🔔 MONITORING & ALERTS</h4>')
-      .replace(/🤖 AI-POWERED ANALYSIS/g, '<h4>🤖 AI-POWERED ANALYSIS</h4>');
-    
-    insightBox.innerHTML = formatted;
-    insightSource.textContent = data.source || 'unknown';
-    
-    // Auto-show all tiles after insights are generated
-    if (insightsData.competitors) showTile('competitors', insightsData.competitors);
-    if (insightsData.market) showTile('market', insightsData.market);
-    if (insightsData.monitoring) showTile('monitoring', insightsData.monitoring);
-    if (insightsData.ai) showTile('ai', insightsData.ai);
-    
-  }catch(err){
-    insightBox.textContent = 'Error fetching insights: ' + (err.message||err);
-    insightSource.textContent = 'error';
+    const found = TILES.filter(id => insightsData[id]);
+    if (!found.length) {
+      setMessage(text);
+    } else {
+      insightBox.hidden = true;
+      found.forEach(id => showTile(id, insightsData[id]));
+    }
+
+    const live = data.source === 'openai';
+    insightSource.textContent = live ? 'live AI' : (data.source === 'mock' ? 'sample data' : (data.source || 'unknown'));
+    insightMeta.classList.toggle('mock', !live);
+    insightMeta.hidden = false;
+  } catch (err) {
+    setMessage('Could not generate insights: ' + (err.message || err), 'err');
+  } finally {
+    btn.disabled = false;
   }
 }
 
-btn.addEventListener('click', ()=>{
+form.addEventListener('submit', (e) => {
+  e.preventDefault();
   const q = input.value && input.value.trim();
-  if(!q){
-    insightBox.textContent = 'Please enter a company or market to search.';
-    insightSource.textContent = 'local';
+  if (!q) {
+    setMessage('Please enter a company or market to search.', 'err');
+    input.focus();
     return;
   }
   fetchInsights(q);
 });
 
-btnExample.addEventListener('click', ()=>{
-  const example = 'Electric vehicle charging market';
-  input.value = example;
-  fetchInsights(example);
+document.querySelectorAll('.chip').forEach(chip => {
+  chip.addEventListener('click', () => fetchInsights(chip.dataset.q));
 });
 
-// Quick try free button behavior
-const btnTry = document.getElementById('btn-try');
-if(btnTry){
-  btnTry.addEventListener('click', ()=>{ document.getElementById('search-input').focus(); });
-}
-
-// Build CTA
-const btnBuild = document.getElementById('btn-build');
-if(btnBuild){ btnBuild.addEventListener('click', ()=>{ alert('Build flow coming soon — this will scaffold an insight in 30 seconds.'); }); }
-
-// Interactive Demo button
-const btnDemo = document.getElementById('btn-demo');
-if(btnDemo){ 
-  btnDemo.addEventListener('click', ()=>{ 
-    const demoQuery = 'Global SaaS analytics market';
-    input.value = demoQuery;
-    fetchInsights(demoQuery);
-  }); 
-}
-
-// Capability button handlers
-const capButtons = [
-  { id: 'btn-competitors', tileId: 'competitors' },
-  { id: 'btn-market', tileId: 'market' },
-  { id: 'btn-monitoring', tileId: 'monitoring' },
-  { id: 'btn-ai', tileId: 'ai' }
-];
-
-capButtons.forEach(({id, tileId}) => {
-  const button = document.getElementById(id);
-  if (button) {
-    button.addEventListener('click', () => {
-      console.log(`Button clicked: ${id}, tileId: ${tileId}`); // Debug
-      console.log(`Current insightsData:`, insightsData); // Debug
-      
-      // Check if insights exist
-      if (!insightsData[tileId]) {
-        alert('Please generate insights first by entering a company or market and clicking "Generate insights"');
-        return;
-      }
-      
-      // Toggle active class
-      const wasActive = button.classList.contains('active');
-      
-      // Remove active class from all buttons
-      capButtons.forEach(({id: btnId}) => {
-        const btn = document.getElementById(btnId);
-        if (btn) btn.classList.remove('active');
-      });
-      
-      const tile = document.getElementById(`tile-${tileId}`);
-      
-      if (wasActive) {
-        // If was active, hide it
-        if (tile) tile.style.display = 'none';
-      } else {
-        // Add active class to clicked button and show tile
-        button.classList.add('active');
-        hideAllTiles();
-        showTile(tileId, insightsData[tileId]);
-      }
-    });
-  }
+// Capability buttons: show one section on its own; press again to see all four.
+document.querySelectorAll('.cap').forEach(button => {
+  button.addEventListener('click', () => {
+    const tileId = button.dataset.tile;
+    if (!insightsData[tileId]) {
+      setMessage('Generate a brief first: enter a company or market above.', 'err');
+      input.focus();
+      return;
+    }
+    const wasActive = button.classList.contains('active');
+    clearActive();
+    hideAllTiles();
+    if (wasActive) {
+      TILES.forEach(id => showTile(id, insightsData[id]));
+    } else {
+      button.classList.add('active');
+      tilesEl.classList.add('solo');
+      showTile(tileId, insightsData[tileId]);
+    }
+  });
 });
