@@ -1,4 +1,4 @@
-import { TILES, esc, inlineHtml, toHtml, extractSections } from './study-format.js';
+import { esc, inlineHtml, parseStudy, navHtml, sectionsHtml } from './study-format.js';
 
 const form = document.getElementById('ask');
 const input = document.getElementById('search-input');
@@ -7,14 +7,11 @@ const insightBox = document.getElementById('insight-box');
 const insightMeta = document.getElementById('insight-meta');
 const insightSource = document.getElementById('insight-source');
 const reportTitle = document.getElementById('report-title');
-const tilesEl = document.querySelector('.tiles');
+const study = document.getElementById('study');
 const monday = document.getElementById('monday');
 const sourcesEl = document.getElementById('sources');
 const saved = document.getElementById('saved');
 
-// Store the full insights data
-let insightsData = {};
-let sourceUrls = {};
 
 // Day / night: one tap flips what is showing, and the choice is kept for the next visit.
 const dayNight = document.getElementById('dayNight');
@@ -29,22 +26,6 @@ dayNight.addEventListener('click', () => {
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', showTheme);
 showTheme();
 
-function showTile(tileId, content) {
-  const tile = document.getElementById(`tile-${tileId}`);
-  if (!tile || !content) return;
-  tile.querySelector('.tile-content').innerHTML = toHtml(content, sourceUrls);
-  tile.hidden = false;
-}
-
-function hideAllTiles() {
-  TILES.forEach(id => { document.getElementById(`tile-${id}`).hidden = true; });
-}
-
-function clearActive() {
-  document.querySelectorAll('.cap').forEach(b => b.classList.remove('active'));
-  tilesEl.classList.remove('solo');
-}
-
 function setMessage(text, kind) {
   insightBox.hidden = false;
   insightBox.className = 'empty' + (kind ? ' ' + kind : '');
@@ -53,9 +34,7 @@ function setMessage(text, kind) {
 
 async function fetchInsights(q) {
   input.value = q;
-  insightsData = {};
-  hideAllTiles();
-  clearActive();
+  study.innerHTML = '';
   reportTitle.textContent = q;
   insightMeta.hidden = true;
   monday.hidden = true;
@@ -75,10 +54,10 @@ async function fetchInsights(q) {
     const text = data.text || JSON.stringify(data, null, 2);
 
     const sources = data.sources || [];
-    sourceUrls = Object.fromEntries(sources.map(x => [String(x.n), x.url]));
-    insightsData = extractSections(text);
-    if (insightsData.monday) {
-      monday.innerHTML = `<b>The question to ask on Monday</b>${inlineHtml(insightsData.monday, sourceUrls)}`;
+    const sourceUrls = Object.fromEntries(sources.map(x => [String(x.n), x.url]));
+    const { sections, monday: question } = parseStudy(text);
+    if (question) {
+      monday.innerHTML = `<b>The question to ask on Monday</b>${inlineHtml(question, sourceUrls)}`;
       monday.hidden = false;
     }
     if (sources.length) {
@@ -86,12 +65,12 @@ async function fetchInsights(q) {
       document.getElementById('sources-list').innerHTML = sources.map(x => `<li><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title)}</a>${x.date ? ` <span class="d">${esc(x.date.slice(0, 16))}</span>` : ''}</li>`).join('');
       sourcesEl.hidden = false;
     }
-    const found = TILES.filter(id => insightsData[id]);
-    if (!found.length) {
+    if (!sections.length) {
       setMessage(text);
     } else {
       insightBox.hidden = true;
-      found.forEach(id => showTile(id, insightsData[id]));
+      study.innerHTML = navHtml(sections) + sectionsHtml(sections, sourceUrls);
+      watchSections();
     }
 
     const live = data.source === 'openai';
@@ -127,27 +106,19 @@ document.querySelectorAll('.chip').forEach(chip => {
   chip.addEventListener('click', () => fetchInsights(chip.dataset.q));
 });
 
-// Capability buttons: show one section on its own; press again to see all four.
-document.querySelectorAll('.cap').forEach(button => {
-  button.addEventListener('click', () => {
-    const tileId = button.dataset.tile;
-    if (!insightsData[tileId]) {
-      setMessage('Generate a brief first: enter a company or market above.', 'err');
-      input.focus();
-      return;
-    }
-    const wasActive = button.classList.contains('active');
-    clearActive();
-    hideAllTiles();
-    if (wasActive) {
-      TILES.forEach(id => showTile(id, insightsData[id]));
-    } else {
-      button.classList.add('active');
-      tilesEl.classList.add('solo');
-      showTile(tileId, insightsData[tileId]);
-    }
-  });
-});
+// Tile navigation: the tiles are links to their sections; the one in view is marked as current.
+let observer;
+function watchSections() {
+  if (observer) observer.disconnect();
+  const links = [...study.querySelectorAll('.tile-nav a')];
+  const mark = (id) => links.forEach(a => a.toggleAttribute('aria-current', a.dataset.sec === id));
+  links.forEach(a => a.addEventListener('click', () => mark(a.dataset.sec)));
+  observer = new IntersectionObserver((entries) => {
+    const top = entries.filter(e => e.isIntersecting).sort((x, y) => x.boundingClientRect.top - y.boundingClientRect.top)[0];
+    if (top) mark(top.target.id.replace(/^sec-/, ''));
+  }, { rootMargin: '-90px 0px -55% 0px' });
+  study.querySelectorAll('.tile').forEach(t => observer.observe(t));
+}
 
 // Past runs: each live study is saved on the server as one HTML file.
 async function loadRuns() {
