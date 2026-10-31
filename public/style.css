@@ -60,16 +60,24 @@ header .wrap{display:flex;align-items:center;justify-content:space-between;gap:1
 .report h2{margin:10px 0 18px;font-size:26px;font-weight:600;letter-spacing:-.02em;line-height:1.2}
 .tag{flex:none;font-size:13px;color:var(--navy);background:var(--wash);border-radius:999px;padding:5px 12px}
 .tag.mock{color:var(--amber-ink);background:var(--amber-wash)}
-.caps{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
-.cap{border-radius:999px;padding:5px 14px;font-size:13.5px;color:var(--slate)}
-.cap.active{background:var(--navy);border-color:var(--navy);color:var(--on-navy)}
+/* Tile navigation: every tile grows to share the row, so the row is always filled edge to edge
+   whether a run has three sections or six; on a narrow screen they wrap and still fill each row. */
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+.tile-nav{position:sticky;top:67px;z-index:5;display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px;padding:8px 0;background:var(--paper)}
+.tile-nav a{flex:1 1 170px;display:flex;flex-direction:column;gap:2px;min-width:0;padding:10px 14px;border:1px solid var(--rule);border-radius:12px;background:var(--paper);color:var(--ink);text-decoration:none;transition:border-color .15s}
+.tile-nav a:hover{border-color:var(--blue)}
+.tile-nav a[aria-current]{background:var(--navy);border-color:var(--navy);color:var(--on-navy)}
+.tile-nav a[aria-current] .n,.tile-nav a[aria-current] small{color:inherit;opacity:.8}
+.tile-nav .n{font:500 12px/1 var(--mono);color:var(--slate)}
+.tile-nav b{font-size:14px;font-weight:600;line-height:1.25}
+.tile-nav small{font-size:12.5px;color:var(--slate)}
 .empty{color:var(--slate);padding:24px;margin:0;border:1px dashed var(--rule);border-radius:14px}
 .empty[hidden]{display:none}
 .empty.err{color:var(--fail);border-color:var(--fail)}
 .tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-.tile{border:1px solid var(--rule);border-radius:14px;padding:18px 20px;background:var(--paper);min-width:0}
-.tile[hidden]{display:none}
-.tiles.solo .tile,.tile.wide{grid-column:1/-1}
+.tile{border:1px solid var(--rule);border-radius:14px;padding:18px 20px;background:var(--paper);min-width:0;scroll-margin-top:160px}
+.tile.wide{grid-column:1/-1}
 .monday{margin:0 0 14px;padding:16px 20px;border-left:3px solid #E11D2E;background:var(--wash);border-radius:0 14px 14px 0;font-size:17px;line-height:1.45}
 .monday[hidden]{display:none}
 .monday b{display:block;margin-bottom:4px;font:500 12px/1 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--slate)}
@@ -141,5 +149,6 @@ footer{border-top:1px solid var(--rule);padding:20px 0 28px;font-size:13px;color
   .box input{padding:4px 8px}
   .tiles,.more{grid-template-columns:1fr}
   .report-head{flex-direction:column;gap:0}
+  .tile-nav{position:static}.tile-nav a{flex-basis:140px}.tile{scroll-margin-top:80px}
   .manifesto{padding:28px 20px}.manifesto h2{font-size:22px}
 }
