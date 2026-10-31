@@ -5,6 +5,7 @@ This repository contains a small MVP for a modern, futuristic-themed market & co
 What you get
 - Single-page static frontend (in `/public`) with hero, search box, capability tiles, demo tiles, and an insights output box.
 - Small Express backend (`server.js`) providing `/api/insights` and `/api/health`. Each study searches the web first (`search.js`, Tavily or OpenAI) and cites its sources.
+- Every live study is saved for reference as one standalone HTML file (about 15 KB) in `runs/`, listed under Past runs on the page and at `/api/runs`. Set `RUNS_DIR` in `.env` to keep them elsewhere. `runs/` is not committed.
 - Rollback points are listed in `ROLLBACK.md`.
 - If `OPENAI_API_KEY` is set, the backend proxies to OpenAI's Chat Completions endpoint (simple example). If not set, the endpoint returns a mocked response.
 

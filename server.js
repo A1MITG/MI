@@ -3,6 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { searchProvider, tavilySources, sourcesBlock, openaiSearchStudy } from './search.js';
+import { saveRun, listRuns } from './runs.js';
 
 dotenv.config();
 
@@ -12,6 +13,16 @@ const __dirname = path.dirname(__filename);
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Saved runs: one standalone HTML file per live study. RUNS_DIR in .env can move them elsewhere.
+const RUNS_DIR = process.env.RUNS_DIR || path.join(__dirname, 'runs');
+app.use('/runs', express.static(RUNS_DIR));
+
+// Keep a reference copy of a live run; a failed save never breaks the answer.
+async function keep(run) {
+  try { return `/runs/${encodeURIComponent(await saveRun(RUNS_DIR, { ...run, createdAt: Date.now() }))}`; }
+  catch (err) { console.error('Could not save run:', err.message); return null; }
+}
 
 // Simple CORS for local testing
 app.use((req, res, next) => {
@@ -54,6 +65,8 @@ const WITH_SOURCES = `
 
 You are given numbered web sources below. Base every [Fact] on them and cite it as [n] right after the point, e.g. "[Fact] ... (2026) [3]". Prefer the newest source when they disagree. A Fact you cannot tie to a source must become an [Estimate]. Never cite a number that is not in the list.`;
 
+app.get('/api/runs', async (req, res) => res.json({ runs: await listRuns(RUNS_DIR) }));
+
 app.get('/api/health', (req, res) => res.json({ status: 'ok', search: searchProvider(), live: Boolean(process.env.OPENAI_API_KEY) }));
 
 app.post('/api/insights', async (req, res) => {
@@ -66,7 +79,8 @@ app.post('/api/insights', async (req, res) => {
 
       if (search === 'openai') {
         const { text, sources } = await openaiSearchStudy(SYSTEM_PROMPT, userPrompt(query));
-        return res.json({ source: 'openai', search, text, sources });
+        const run = await keep({ query, text, sources, search, model: process.env.OPENAI_SEARCH_MODEL || 'gpt-4.1-mini' });
+        return res.json({ source: 'openai', search, text, sources, run });
       }
 
       let sources = [];
@@ -95,13 +109,10 @@ app.post('/api/insights', async (req, res) => {
       const data = await resp.json();
       if (!resp.ok) throw new Error(`OpenAI ${resp.status}: ${data.error?.message || resp.statusText}`);
       const text = data?.choices?.[0]?.message?.content ?? JSON.stringify(data);
-      return res.json({
-        source: 'openai',
-        search: sources.length ? 'tavily' : 'none',
-        searchError,
-        text,
-        sources: sources.map(({ n, title, url, date }) => ({ n, title, url, date }))
-      });
+      const used = sources.length ? 'tavily' : 'none';
+      const cited = sources.map(({ n, title, url, date }) => ({ n, title, url, date }));
+      const run = await keep({ query, text, sources: cited, search: used, model });
+      return res.json({ source: 'openai', search: used, searchError, text, sources: cited, run });
     }
 
     // Fallback mocked response when no API key
