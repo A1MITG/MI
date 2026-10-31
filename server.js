@@ -15,7 +15,8 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Saved runs: one standalone HTML file per live study. RUNS_DIR in .env can move them elsewhere.
-const RUNS_DIR = process.env.RUNS_DIR || path.join(__dirname, 'runs');
+// On Vercel only /tmp is writable, so runs saved there last only while that server instance is warm.
+const RUNS_DIR = process.env.RUNS_DIR || (process.env.VERCEL ? '/tmp/runs' : path.join(__dirname, 'runs'));
 app.use('/runs', express.static(RUNS_DIR));
 
 // Keep a reference copy of a live run; a failed save never breaks the answer.
@@ -145,7 +146,12 @@ Note: set OPENAI_API_KEY in .env to enable live AI-powered results.`;
   }
 });
 
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
-  console.log(`AI MI MVP server listening on http://localhost:${PORT} (search: ${searchProvider()})`);
-});
+// Vercel runs the exported app as a function (and serves public/ from its CDN); locally we listen on a port.
+export default app;
+
+if (!process.env.VERCEL) {
+  const PORT = process.env.PORT || 4000;
+  app.listen(PORT, () => {
+    console.log(`AI MI MVP server listening on http://localhost:${PORT} (search: ${searchProvider()})`);
+  });
+}
