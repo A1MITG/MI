@@ -49,3 +49,8 @@ If you'd like, I can:
 - Turn this into a React + Vite + Tailwind project and wire a nicer UI.
 - Add OpenAI/Grok provider switch and caching for repeated queries.
 - Add a small demo pipeline that generates a PDF or PPT battlecard from the AI output.
+
+Hosting on Vercel
+- The repo deploys to Vercel as-is: `server.js` exports the Express app and `public/` is served by Vercel's CDN.
+- Add the same keys as `.env` in Vercel under Project > Settings > Environment Variables: `OPENAI_API_KEY`, `TAVILY_API_KEY`, `SEARCH_PROVIDER` (and optionally `OPENAI_MODEL`). Redeploy after adding them.
+- Saved runs on Vercel go to `/tmp/runs`, which is temporary. Keep reference copies by running locally, or move them to Vercel Blob later.
