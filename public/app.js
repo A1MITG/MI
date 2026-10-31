@@ -6,7 +6,7 @@ const insightMeta = document.getElementById('insight-meta');
 const insightSource = document.getElementById('insight-source');
 const reportTitle = document.getElementById('report-title');
 const tilesEl = document.querySelector('.tiles');
-const TILES = ['today', 'moves', 'disruption', 'future', 'lead'];
+const TILES = ['competitors', 'market', 'alerts', 'ai'];
 const monday = document.getElementById('monday');
 const sourcesEl = document.getElementById('sources');
 
@@ -27,7 +27,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', showTheme)
 showTheme();
 
 // Headings the study prompt asks for, in order, keyed by tile id.
-const HEADINGS = { today: 'WHERE THINGS STAND', moves: 'STRATEGIC MOVES', disruption: 'DISRUPTION WATCH', future: 'THE FUTURE OF WORK', lead: 'BE THE TREND SETTER' };
+const HEADINGS = { competitors: 'COMPETITOR DISCOVERY', market: 'MARKET SIZE', alerts: 'ALERTS', ai: 'AI-POWERED FORWARD-LOOKING ANALYSIS' };
 const MONDAY = /^\W*the question to ask on monday:?\**\s*/i;
 
 function extractSections(text) {
@@ -36,8 +36,9 @@ function extractSections(text) {
   let monday = '';
   text.split('\n').forEach(line => {
     const plain = line.replace(/[*#]/g, '').trim().toUpperCase();
-    const hit = TILES.find(id => plain.replace(/^[^A-Z]+/, '').startsWith(HEADINGS[id]));
-    if (hit && plain.length < HEADINGS[hit].length + 12) { current = hit; return; }
+    const head = plain.replace(/^[^A-Z]+/, '').replace(/[:\s]+$/, '');
+    const hit = TILES.find(id => head === HEADINGS[id]);
+    if (hit) { current = hit; return; }
     if (MONDAY.test(line.replace(/\*\*/g, ''))) { monday = line.replace(/\*\*/g, '').replace(MONDAY, '').trim(); current = null; return; }
     if (current) sections[current] += line + '\n';
   });
