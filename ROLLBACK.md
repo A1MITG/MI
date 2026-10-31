@@ -5,6 +5,7 @@ To restore one, stop the server, run the commands in this MI folder, then `npm s
 
 | Date | Restore point | What it is | How to roll back |
 |------|---------------|------------|------------------|
+| 2026-10-31 | tag `restore/2026-10-31-before-saved-runs` (= `5c5d388`) | Four tiles, before runs were saved as HTML (merged as `ccaf549`). Saved runs in `runs/` are not in git and survive a rollback. | `git revert -m 1 ccaf549` and push, or `git checkout restore/2026-10-31-before-saved-runs` to view; restart the server. |
 | 2026-10-31 | tag `restore/2026-10-31-before-four-tiles` (= `fc42887`) | Five sections (where things stand, strategic moves, disruption watch, future of work, trend setter), before regrouping into four tiles (merged as `5e71841`). | `git revert -m 1 5e71841` and push, or `git checkout restore/2026-10-31-before-four-tiles` to view; restart the server. |
 | 2026-10-31 | tag `restore/2026-10-31-before-company` (= `c36f201`) | Before the Continuum Lab company section and manifesto (merged as `cef7357`). | `git revert -m 1 cef7357` and push, or `git checkout restore/2026-10-31-before-company` to view. |
 | 2026-10-31 | tag `restore/2026-10-31-before-search` (= `b3b9db4`, branch `rollback/2026-10-31-before-search`) | Vantage-360 look, one OpenAI call per query, four section cards, no web search. | See below. |
