@@ -6,7 +6,9 @@ const insightMeta = document.getElementById('insight-meta');
 const insightSource = document.getElementById('insight-source');
 const reportTitle = document.getElementById('report-title');
 const tilesEl = document.querySelector('.tiles');
-const TILES = ['competitors', 'market', 'monitoring', 'ai'];
+const TILES = ['today', 'moves', 'disruption', 'future', 'lead'];
+const monday = document.getElementById('monday');
+const sourcesEl = document.getElementById('sources');
 
 // Store the full insights data
 let insightsData = {};
@@ -24,20 +26,34 @@ dayNight.addEventListener('click', () => {
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', showTheme);
 showTheme();
 
+// Headings the study prompt asks for, in order, keyed by tile id.
+const HEADINGS = { today: 'WHERE THINGS STAND', moves: 'STRATEGIC MOVES', disruption: 'DISRUPTION WATCH', future: 'THE FUTURE OF WORK', lead: 'BE THE TREND SETTER' };
+const MONDAY = /^\W*the question to ask on monday:?\**\s*/i;
+
 function extractSections(text) {
-  const sections = { competitors: '', market: '', monitoring: '', ai: '' };
-  // Split by section headers and extract content
-  text.split(/(?=🎯|📊|🔔|🤖)/).forEach(part => {
-    if (part.includes('🎯 COMPETITOR DISCOVERY')) sections.competitors = part.replace('🎯 COMPETITOR DISCOVERY', '').trim();
-    else if (part.includes('📊 MARKET SIZING')) sections.market = part.replace('📊 MARKET SIZING', '').trim();
-    else if (part.includes('🔔 MONITORING & ALERTS')) sections.monitoring = part.replace('🔔 MONITORING & ALERTS', '').trim();
-    else if (part.includes('🤖 AI-POWERED ANALYSIS')) sections.ai = part.replace('🤖 AI-POWERED ANALYSIS', '').trim();
+  const sections = Object.fromEntries(TILES.map(id => [id, '']));
+  let current = null;
+  let monday = '';
+  text.split('\n').forEach(line => {
+    const plain = line.replace(/[*#]/g, '').trim().toUpperCase();
+    const hit = TILES.find(id => plain.replace(/^[^A-Z]+/, '').startsWith(HEADINGS[id]));
+    if (hit && plain.length < HEADINGS[hit].length + 12) { current = hit; return; }
+    if (MONDAY.test(line.replace(/\*\*/g, ''))) { monday = line.replace(/\*\*/g, '').replace(MONDAY, '').trim(); current = null; return; }
+    if (current) sections[current] += line + '\n';
   });
+  TILES.forEach(id => { sections[id] = sections[id].trim(); });
+  sections.monday = monday;
   return sections;
 }
 
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-const inline = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/^#+\s*/, '');
+let sourceUrls = {};
+const LABEL = { fact: 'Fact', estimate: 'Estimate', foresight: 'Foresight' };
+const inline = (s) => esc(s)
+  .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/^#+\s*/, '')
+  .replace(/\(?\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)\)?/g, (m, t, u) => `<a class="cite" href="${u}" target="_blank" rel="noopener">${t.replace(/^www\./, '')}</a>`)
+  .replace(/\[(fact|estimate|foresight)\]/gi, (m, k) => `<span class="lbl ${k.toLowerCase()}">${LABEL[k.toLowerCase()]}</span>`)
+  .replace(/\[(\d{1,2}(?:\s*,\s*\d{1,2})*)\]/g, (m, list) => list.split(/\s*,\s*/).map(n => sourceUrls[n] ? `<a class="cite" href="${esc(sourceUrls[n])}" target="_blank" rel="noopener">[${n}]</a>` : `[${n}]`).join(''));
 
 // The model answers in light markdown: bullets (•, -, *), numbered items and **bold**. Turn that into
 // lists and paragraphs; anything else stays as a plain paragraph.
@@ -91,7 +107,9 @@ async function fetchInsights(q) {
   clearActive();
   reportTitle.textContent = q;
   insightMeta.hidden = true;
-  setMessage(`Generating insights for ${q}…`, 'loading');
+  monday.hidden = true;
+  sourcesEl.hidden = true;
+  setMessage(`Searching the web and writing the study for ${q}…`, 'loading');
   btn.disabled = true;
 
   try {
@@ -104,7 +122,18 @@ async function fetchInsights(q) {
     if (!res.ok) throw new Error(data.error || res.statusText);
     const text = data.text || JSON.stringify(data, null, 2);
 
+    const sources = data.sources || [];
+    sourceUrls = Object.fromEntries(sources.map(x => [String(x.n), x.url]));
     insightsData = extractSections(text);
+    if (insightsData.monday) {
+      monday.innerHTML = `<b>The question to ask on Monday</b>${inline(insightsData.monday)}`;
+      monday.hidden = false;
+    }
+    if (sources.length) {
+      document.getElementById('sources-count').textContent = `(${sources.length}, via ${data.search === 'openai' ? 'OpenAI web search' : 'Tavily'})`;
+      document.getElementById('sources-list').innerHTML = sources.map(x => `<li><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title)}</a>${x.date ? ` <span class="d">${esc(x.date.slice(0, 16))}</span>` : ''}</li>`).join('');
+      sourcesEl.hidden = false;
+    }
     const found = TILES.filter(id => insightsData[id]);
     if (!found.length) {
       setMessage(text);
@@ -114,8 +143,10 @@ async function fetchInsights(q) {
     }
 
     const live = data.source === 'openai';
-    insightSource.textContent = live ? 'live AI' : (data.source === 'mock' ? 'sample data' : (data.source || 'unknown'));
-    insightMeta.classList.toggle('mock', !live);
+    const searched = data.search && data.search !== 'none';
+    insightSource.textContent = live ? (searched ? `live AI + web, ${sources.length} sources` : 'live AI, no web search') : (data.source === 'mock' ? 'sample data' : (data.source || 'unknown'));
+    insightMeta.classList.toggle('mock', !live || !searched);
+    if (data.searchError) insightMeta.title = 'Web search failed: ' + data.searchError;
     insightMeta.hidden = false;
   } catch (err) {
     setMessage('Could not generate insights: ' + (err.message || err), 'err');

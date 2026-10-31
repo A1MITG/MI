@@ -4,7 +4,8 @@ This repository contains a small MVP for a modern, futuristic-themed market & co
 
 What you get
 - Single-page static frontend (in `/public`) with hero, search box, capability tiles, demo tiles, and an insights output box.
-- Small Express backend (`server.js`) providing `/api/insights` and `/api/health`.
+- Small Express backend (`server.js`) providing `/api/insights` and `/api/health`. Each study searches the web first (`search.js`, Tavily or OpenAI) and cites its sources.
+- Rollback points are listed in `ROLLBACK.md`.
 - If `OPENAI_API_KEY` is set, the backend proxies to OpenAI's Chat Completions endpoint (simple example). If not set, the endpoint returns a mocked response.
 
 Quick start (Windows PowerShell)
@@ -16,14 +17,9 @@ cd c:\Projects\AI_Factory\MI
 npm install
 ```
 
-2. Create `.env` (optional) and set `OPENAI_API_KEY` to enable live AI results
-
-Example `.env`:
-
-```
-OPENAI_API_KEY=sk-xxxx
-PORT=4000
-```
+2. Add your keys: copy `env.example` to `.env` in this folder and fill in `OPENAI_API_KEY` and `TAVILY_API_KEY`.
+   `SEARCH_PROVIDER` picks the web search: `tavily` (default), `openai` (OpenAI's own web search) or `none`.
+   Restart the server after changing `.env`. `http://localhost:4000/api/health` shows which search is active.
 
 3. Run
 
