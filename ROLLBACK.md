@@ -23,11 +23,11 @@ Undo it on main for good (keeps history, safe to push):
 
 ```bash
 git checkout main
-git revert -m 1 <merge commit of feat/web-search-future-study>
+git revert -m 1 8f020e5
 git push origin main
 ```
 
-`git log --oneline --merges -5` shows the merge commit. Your `.env` keys are not in git, so a rollback never touches them.
+`8f020e5` is the merge that added web search. Your `.env` keys are not in git, so a rollback never touches them.
 
 A plain file copy of the same version is also on this PC at
 `C:\Projects\AI_Factory\vantage-point-backups\2026-10-31_mi-before-search`.
