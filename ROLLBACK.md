@@ -5,6 +5,7 @@ To restore one, stop the server, run the commands in this MI folder, then `npm s
 
 | Date | Restore point | What it is | How to roll back |
 |------|---------------|------------|------------------|
+| 2026-11-01 | branch `restore/2026-11-01-before-readme` (= `55a7711`) | README before the publishing rewrite. Only README.md changed, so the app is unaffected. | `git checkout restore/2026-11-01-before-readme -- README.md`, commit and push. |
 | 2026-11-01 | tag `restore/2026-11-01-before-vercel` (= `9ed0339`) | Before the Vercel hosting change (merged as `08e8e17`). Vercel project `vantage-360-mi` (team A1) deploys from main. | `git revert -m 1 08e8e17` and push. To take the site down, pause or delete the project in Vercel; to roll the site back, promote an earlier deployment in Vercel > Deployments. |
 | 2026-10-31 | tag `restore/2026-10-31-before-manifesto-label` | "Company" label in the header and card, before it became "Manifesto" (`4c44eeb`). | `git revert 4c44eeb` and push; reload the page. |
 | 2026-10-31 | tag `restore/2026-10-31-before-tile-nav` (= `3f6e68a`) | Fixed four tiles with filter buttons, before tiles became section navigation (merged as `57e200a`). | `git revert -m 1 57e200a` and push, or `git checkout restore/2026-10-31-before-tile-nav` to view; restart the server. |
