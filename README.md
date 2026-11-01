@@ -1,56 +1,106 @@
-# AI Market Intelligence — MVP
+# Vantage-360 · Market Intelligence
 
-This repository contains a small MVP for a modern, futuristic-themed market & competitive intelligence platform front page and backend prototype.
+**by [Continuum Lab](https://continuumlab.in)**
 
-What you get
-- Single-page static frontend (in `/public`) with hero, search box, capability tiles, demo tiles, and an insights output box.
-- Small Express backend (`server.js`) providing `/api/insights` and `/api/health`. Each study searches the web first (`search.js`, Tavily or OpenAI) and cites its sources.
-- Every live study is saved for reference as one standalone HTML file (about 15 KB) in `runs/`, listed under Past runs on the page and at `/api/runs`. Set `RUNS_DIR` in `.env` to keep them elsewhere. `runs/` is not committed.
-- Rollback points are listed in `ROLLBACK.md`.
-- If `OPENAI_API_KEY` is set, the backend proxies to OpenAI's Chat Completions endpoint (simple example). If not set, the endpoint returns a mocked response.
+Vantage-360 turns a single question about a market or a company into a forward-looking intelligence brief for senior leaders. Each study searches the web, cites its sources, and separates what is known from what is estimated and what is imagined.
 
-Quick start (Windows PowerShell)
+**Live demo:** [vantage-360-mi.vercel.app](https://vantage-360-mi.vercel.app)
 
-1. Install deps
+> Status: MVP prototype, built to demonstrate the concept. It is not yet a production service.
 
-```powershell
-cd c:\Projects\AI_Factory\MI
+## What a study contains
+
+Every brief is organised into four sections, shown as tiles you can jump between:
+
+| Section | What it answers |
+|---|---|
+| 🎯 Competitor discovery | The 4 to 6 players that matter, including newcomers from outside the market, and their dated, sourced moves from the last 18 months. |
+| 📊 Market size | Size and growth, segments and regions, how customers buy, and where the profit pool is moving. |
+| 🔔 Alerts | Signals to act on now, with a standing check on whether AI labs are moving into the market. |
+| 🤖 AI forward-looking analysis | The future of work in 2030 and 2035 (expected, radical and wildcard scenarios) and bold moves to set the trend rather than follow it. |
+
+Each point is labelled **[Fact]**, **[Estimate]** or **[Foresight]**, and every Fact carries a numbered citation to its web source. The brief closes with one question for the leader to put to their team on Monday.
+
+## Features
+
+- **Web-grounded research.** Tavily web search by default, with OpenAI's built-in web search as an alternative.
+- **Saved runs.** Every live study is saved as a small standalone HTML file (about 15 KB) that opens in any browser, offline included, and is listed under *Past runs*.
+- **Day and night themes**, with a layout that works on desktop and mobile.
+- **Sample mode.** Without an API key the app runs on built-in sample data, so the interface can be shown anywhere.
+
+## Getting started
+
+Requirements: [Node.js](https://nodejs.org) 18 or later.
+
+```bash
+git clone https://github.com/A1MITG/MI.git
+cd MI
 npm install
-```
-
-2. Add your keys: copy `env.example` to `.env` in this folder and fill in `OPENAI_API_KEY` and `TAVILY_API_KEY`.
-   `SEARCH_PROVIDER` picks the web search: `tavily` (default), `openai` (OpenAI's own web search) or `none`.
-   Restart the server after changing `.env`. `http://localhost:4000/api/health` shows which search is active.
-
-3. Run
-
-```powershell
+cp env.example .env      # Windows PowerShell: Copy-Item env.example .env
 npm start
-# then open http://localhost:4000
 ```
 
-Notes and next steps
-- The UI is intentionally a single static page MVP. We'll iterate to a React + Tailwind implementation for better componentization and reusability.
-- Grok (or other LLM) integration: this repo demonstrates OpenAI integration; add a separate provider switch in `server.js` to call Grok endpoints when `GROK_API_KEY` is available.
-- Enterprise features to add: auth, account management, usage quotas, dashboards, PDF/PPT export, webhook integrations, and payments.
+Then open <http://localhost:4000>. Use `npm run dev` to restart automatically on code changes.
 
-Security
-- Don’t commit API keys. Use environment variables and secrets stores for production.
+## Configuration
 
-Mapping to your requirements
-- Homepage: implemented hero, search, capabilities, demo tiles, who it's for, proof area (placeholder), CTA zone — Done (MVP)
-- Platform: single-page summary added — Next: add interactive product tour pages and deep feature pages.
-- Intelligence products: outline present — Next: implement pages and templates for Battlecards, Market Reports, Company X-Rays.
-- Solutions by role & industry: placeholder sections added — Next: create per-role pages with sample insights and competitor maps.
-- Resources & Insights: placeholder pages added — Next: implement blog/intelligence hub, downloads, tutorials.
-- Company & Conversion: placeholder pages — Next: pricing, onboarding, ROI calculator, demo booking.
+All settings live in `.env`, which is never committed. `env.example` lists every option with a short explanation.
 
-If you'd like, I can:
-- Turn this into a React + Vite + Tailwind project and wire a nicer UI.
-- Add OpenAI/Grok provider switch and caching for repeated queries.
-- Add a small demo pipeline that generates a PDF or PPT battlecard from the AI output.
+| Variable | Required | Purpose |
+|---|---|---|
+| `OPENAI_API_KEY` | For live studies | Writes the study. Without it the app shows sample data. |
+| `OPENAI_MODEL` | No | Model that writes the study. Default `gpt-4o-mini`. |
+| `SEARCH_PROVIDER` | No | `tavily` (default), `openai` or `none`. |
+| `TAVILY_API_KEY` | When using Tavily | Web search through Tavily. |
+| `OPENAI_SEARCH_MODEL` | No | Model used when `SEARCH_PROVIDER=openai`. Default `gpt-4.1-mini`. |
+| `RUNS_DIR` | No | Folder for saved runs. Default `runs/`. |
+| `PORT` | No | Local port. Default `4000`. |
 
-Hosting on Vercel
-- The repo deploys to Vercel as-is: `server.js` exports the Express app and `public/` is served by Vercel's CDN.
-- Add the same keys as `.env` in Vercel under Project > Settings > Environment Variables: `OPENAI_API_KEY`, `TAVILY_API_KEY`, `SEARCH_PROVIDER` (and optionally `OPENAI_MODEL`). Redeploy after adding them.
-- Saved runs on Vercel go to `/tmp/runs`, which is temporary. Keep reference copies by running locally, or move them to Vercel Blob later.
+Restart the server after changing `.env`. `GET /api/health` reports whether live mode is on and which search provider is active.
+
+## API
+
+| Endpoint | Description |
+|---|---|
+| `POST /api/insights` | Body `{ "query": "..." }`. Returns the study text, its sources and a link to the saved run. |
+| `GET /api/runs` | Lists saved runs. |
+| `GET /runs/<file>` | Opens a saved run. |
+| `GET /api/health` | Status, live mode and active search provider. |
+
+## Project structure
+
+```
+server.js            Express app: study prompt and API routes
+search.js            Web search (Tavily or OpenAI)
+runs.js              Saves each study as a standalone HTML file
+public/              Front end (HTML, CSS, JavaScript, brand assets)
+public/study-format.js   Shared formatting for the page and saved runs
+env.example          Template for .env
+ROLLBACK.md          Restore points and how to roll back
+```
+
+## Deployment
+
+The app deploys to [Vercel](https://vercel.com) as is: `server.js` exports the Express app as a function and `public/` is served from Vercel's CDN.
+
+1. Import the repository into Vercel.
+2. Add the same variables as your `.env` under *Project → Settings → Environment Variables*.
+3. Redeploy.
+
+On Vercel, saved runs go to `/tmp/runs` and last only while a server instance is warm. Run locally to keep permanent copies.
+
+## Security
+
+- API keys are read from environment variables only. `.env` and other key files are listed in `.gitignore`.
+- The hosted demo has no sign-in yet. Add access protection before sharing it beyond a trusted audience.
+
+## Roadmap
+
+- Access protection and user accounts for the hosted demo
+- Clearer separation of competitors and partners in competitor discovery
+- Durable storage for saved runs on Vercel
+- Export of a brief as PDF or slides
+
+## About
+
+Vantage-360 is built by [Continuum Lab](https://continuumlab.in). Access is free for students and learners.
